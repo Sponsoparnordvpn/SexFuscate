@@ -23,6 +23,7 @@ To run SexFuscate, please head up to .vscode/main.luau. You'll find the configur
 ## Example
 
 In this example, I am obfuscating the following code with string encryption, algorithm encryption and short output mode
+
 **[Input:](https://github.com/Sponsoparnordvpn/SexFuscate/input.luau)**
 ```lua
 local x;
