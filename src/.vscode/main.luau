@@ -5,6 +5,14 @@ WARNING: For any questions, please contact me on my Discord [Link in my GitHub p
 DISCLAIMER: You can use this, but please give credit 🙏
 --]]
 
+--- SOURCE HERE ---
+local source = [[
+    local x;
+    x = 5300
+    print(x+2)
+]]
+
+
 local _VERSION = "1.0.0"
 local Obfuscator = {}
 
@@ -15,7 +23,7 @@ Obfuscator.Settings = {
     ["EncodingAlgorithm"] = "zalgo", -- If EncodeStrings is false, then it's not necessary; OPTIONS: bytes/xor/zalgo
     ["EncodeStrings"] = true, -- Encode strings using the specified algorithm
     ["RandomOutputs"] = true, -- Generate random outputs to obfuscate
-    ["ShortOutputs"] = true, -- Use short outputs to minimize code size
+    ["ShortOutputs"] = false, -- Use short outputs to minimize code size
 }
 
 
@@ -563,11 +571,4 @@ Obfuscator.Obfuscate = function(source)
 end
 
 
-
-
-local source = [[
-    local x;
-    x = 5300
-    print(x+2)
-]]
 print(Obfuscator.Obfuscate(source))
