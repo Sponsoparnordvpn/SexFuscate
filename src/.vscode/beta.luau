@@ -534,6 +534,7 @@ Obfuscator.Obfuscate = function(source)
             ENVCode = ENVCode .. string.format("local %s = %s;", v, k)
         end
     end
+    ENVCode = Locals..Assign
     print("Obfuscating the code...")
     
     if Obfuscator.Settings.EncodingAlgorithm == "zalgo" and Obfuscator.Settings.EncodeStrings then
