@@ -10,11 +10,11 @@ local source = [[
     print("Hello, World !")
 ]]
 
-local _VERSION = "1.0.0"
+local _VERSION = "1.0.1"
 local Obfuscator = {}
 
 Obfuscator.Settings = {
-    ["Watermark"] = string.format("This file was sexified by SexFuscator | %s", _VERSION),
+    ["Watermark"] = string.format("This file was uglified by SexFuscator | %s", _VERSION),
     ["Prefix"] = "_SEX", -- Your variable prefix, e.g., _SEX -> _SEXIlIIl11IllI1IlI
     ["ComplexifyMaths"] = true, -- Complexify the algorithms
     ["EncodingAlgorithm"] = "zalgo", -- If EncodeStrings is false, then it's not necessary; OPTIONS: bytes/xor/zalgo
