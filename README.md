@@ -1,7 +1,7 @@
-# SexFuscate 1.0.0
+# SexFuscate 1.0.1
 
 Welcome to SexFuscate, a Luau uglifier made in Luau.
-
+To see the latest changelogs please check changelogs.luau
 **WARNING: SexFuscate is a source-based obfuscator, which means that we do source-based obfuscation and not VM-based obfuscation.**
 
 **Note:** I made this for learning purposes; feel free to use it to fit your needs!
