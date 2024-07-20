@@ -7,7 +7,8 @@ DISCLAIMER: You can use this, but please give credit 🙏
 
 --- SOURCE HERE ---
 local source = [[
-    print("Hello, World !")
+    local a = {"hey"}
+    print(#a)
 ]]
 
 local _VERSION = "1.0.0"
@@ -17,8 +18,9 @@ Obfuscator.Settings = {
     ["Watermark"] = string.format("This file was sexified by SexFuscator | %s", _VERSION),
     ["Prefix"] = "_SEX", -- Your variable prefix, e.g., _SEX -> _SEXIlIIl11IllI1IlI
     ["ComplexifyMaths"] = true, -- Complexify the algorithms
-    ["EncodingAlgorithm"] = "zalgo", -- If EncodeStrings is false, then it's not necessary; OPTIONS: bytes/xor/zalgo
+    ["EncodingAlgorithm"] = "zalgo", -- If EncodeStrings is false, then it's not necessary; OPTIONS: bytes/xor/zalgo [XOR WILL BE ADDED SOON]
     ["EncodeStrings"] = true, -- Encode strings using the specified algorithm
+    ["StringEncode"] = "confusion", --- String encoding type; OPTIONS: single/confusion [CONFUSION WILL BE REMOVED SOON]
     ["RandomOutputs"] = true, -- Generate random outputs to obfuscate
     ["ShortOutputs"] = false, -- Use short outputs to minimize code size
 }
@@ -133,10 +135,15 @@ Lexer.Patterns = {
         name = "whitespace"
     },
     {
+        pattern = "^#([%a_][%w_]*)",
+        name = "hashtag"
+    },
+    {
         pattern = "^.",
         name = "unknown"
     }
 }
+
 Lexer.Scan = function(lexed)
     for _, comp in pairs(lexed) do
         if comp.type == "word" then
@@ -260,21 +267,33 @@ local GeneratedNames = {
     "_SEXlII1II111I11ll1",
     "_SEXIl1111l1IIll111"
 }
-
 Variables.GenName = function()
-    local name = Obfuscator.Settings.Prefix
-    local choices = {"1", "I", "l"}
-    for i = 1, 15 do
-        local choice = math.random(1, #choices)
-        name = name .. choices[choice]
-    end
-    if GeneratedNames[name] then
-        return Variables.GenName()
+    if Obfuscator.Settings.StringEncode == "confusion" then
+        local name = Obfuscator.Settings.Prefix
+        local choices = {"1", "I", "l"}
+        for i = 1, 15 do
+            local choice = math.random(1, #choices)
+            name = name .. choices[choice]
+        end
+        if table.find(GeneratedNames, name) then
+            return Variables.GenName()
+        else
+            table.insert(GeneratedNames, name)
+            return name
+        end
     else
-        GeneratedNames[name] = name
+        local char = string.lower(string.char(math.random(string.byte('A'), string.byte('Z'))))
+        if table.find(GeneratedNames, char) then
+            char = char..tostring(#GeneratedNames)
+            table.insert(GeneratedNames, char)
+            return char
+        else
+            table.insert(GeneratedNames, char)
+            return char
+        end
     end
-    return name
 end
+
 Variables.Encrypt = function(var, type)
     if type == "bytes" then
         print(tostring(var))
@@ -397,7 +416,6 @@ Obfuscator.Obfuscate = function(source)
         print("[RoFuscate] Something went wrong : Lexer is not able to parse 'source'")
         return source
     end
-    
     local Serialized = Serializer:Serialize(LexedArray)
     local Minified = Minifier:Minify(Serialized, true)
     local MinifyLexed = Lexer:Parse(Minified)
@@ -494,6 +512,31 @@ Obfuscator.Obfuscate = function(source)
                     v["raw"] = Table.."."..Method
                 end
             end
+        elseif v["type"] == "hashtag" then
+            print(type(v["raw"]))
+            v["raw"] = string.gsub(v["raw"], "#", "")
+            if ENV.Tables[v["raw"]] then
+                v["raw"] = "#"..ENV.Tables[v["raw"]]
+            else
+                -- not global shit --
+                if Obfuscator.Settings.ShortOutputs then
+                    if ENV.Locals[v["raw"]] then
+                        v["raw"] = "#"..ENV.Locals[v["raw"]]
+                    else
+                        if SRCContent[v["raw"]] then
+                            v["raw"] = "#"..SRCContent[v["raw"]]
+                        else
+                            v["raw"] = "#"..v["raw"]
+                        end
+                    end
+                else
+                    if SRCContent[v["raw"]] then
+                        v["raw"] = "#"..SRCContent[v["raw"]]
+                    else
+                        v["raw"] = "#"..v["raw"]
+                    end
+                end
+            end
         end
     end
     
@@ -522,6 +565,7 @@ Obfuscator.Obfuscate = function(source)
             end
             ENVCode = ENVCode .. string.format("local %s = %s;", v, k)
         end
+        
         for k, v in pairs(ENV.Tables) do
             ENVCode = ENVCode .. string.format("local %s = %s;", v, k)
         end
@@ -574,6 +618,5 @@ Obfuscator.Obfuscate = function(source)
     print("--------------------------------------------------")
     return n
 end
-
 
 print(Obfuscator.Obfuscate(source))
