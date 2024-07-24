@@ -2,16 +2,18 @@ local Maths = {}
 local mappings = {}
 math.randomseed(os.time() + math.random(1000000))
 
-Maths.OP = function(y)
+Maths.OP = function(y, fl)
     if type(y) ~= "number" then
         y = tonumber(y)
     end
-
+    if not fl then
+        fl = "math.floor"
+    end
     local function is_integer(n)
         return type(n) == "number" and n == math.floor(n)
     end
 
-    if is_integer(y) and y ~= 0 then
+    if is_integer(y) and y ~= 0 and y ~= 1 then
         if mappings[y] then
             return mappings[y]
         end
@@ -29,12 +31,12 @@ Maths.OP = function(y)
             denominator = 1
         end
         
-        local expression = string.format("math.floor((%d * %d^4 - %d * %d^3 + %d * %d^2 - %d * %d + %d) / (%d * %d^3 - %d * %d^2 + %d * %d - %d))", a, y, b, y, c, y, d, y, e, a, y, b, y, c, y, d)
+        local expression = string.format("%s((%d * %d^4 - %d * %d^3 + %d * %d^2 - %d * %d + %d) / (%d * %d^3 - %d * %d^2 + %d * %d - %d))",fl, a, y, b, y, c, y, d, y, e, a, y, b, y, c, y, d)
         
         mappings[y] = expression
         return expression
     else
-        if y == 0 then
+        if y == 0  then
             return string.format("0*%d", math.random(1, 65000))
         else
             return string.format("%s-%s+%s", y, y, y)

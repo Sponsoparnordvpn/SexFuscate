@@ -7,8 +7,7 @@ DISCLAIMER: You can use this, but please give credit 🙏
 
 --- SOURCE HERE ---
 local source = [[
-    local a = {"hey"}
-    print(#a)
+    print("Hello, world !")
 ]]
 
 local _VERSION = "1.0.0"
@@ -18,11 +17,10 @@ Obfuscator.Settings = {
     ["Watermark"] = string.format("This file was sexified by SexFuscator | %s", _VERSION),
     ["Prefix"] = "_SEX", -- Your variable prefix, e.g., _SEX -> _SEXIlIIl11IllI1IlI
     ["ComplexifyMaths"] = true, -- Complexify the algorithms
-    ["EncodingAlgorithm"] = "zalgo", -- If EncodeStrings is false, then it's not necessary; OPTIONS: bytes/xor/zalgo [XOR WILL BE ADDED SOON]
+    ["EncodingAlgorithm"] = "xor", -- If EncodeStrings is false, then it's not necessary; OPTIONS: bytes/xor/zalgo
     ["EncodeStrings"] = true, -- Encode strings using the specified algorithm
-    ["StringEncode"] = "confusion", --- String encoding type; OPTIONS: single/confusion [CONFUSION WILL BE REMOVED SOON]
+    ["StringEncode"] = "single", --- String encoding type; OPTIONS: single/confusion
     ["RandomOutputs"] = true, -- Generate random outputs to obfuscate
-    ["ShortOutputs"] = false, -- Use short outputs to minimize code size
 }
 
 
@@ -76,6 +74,7 @@ Lexer.Globals = {
 	["math"] = true,
 	["table"] = true,
 	["script"] = true,
+    ["bit32"] = true
 }
 
 
@@ -87,11 +86,15 @@ Lexer.Keywords = {
     ["end"] = true,
     ["do"] = true,
     ["while"] = true,
+    ["break"] = true,
     ["repeat"] = true,
     ["until"] = true,
     ["nil"] = true,
     ["function"] = true,
-    ["return"] = true
+    ["return"] = true,
+    ["and"] = true,
+    ["not"] = true,
+    ["or"] = true
 }
 Lexer.Patterns = {
     {
@@ -127,7 +130,7 @@ Lexer.Patterns = {
         name = "word"
     },
     {
-        pattern = "^([%-%+/%*=])",
+        pattern = "^([<>]=?|==|!=|<=|>=|=>|[+*/%^()])",
         name = "operator"
     },
     {
@@ -215,16 +218,18 @@ local Maths = {}
 local mappings = {}
 math.randomseed(os.time() + math.random(1000000))
 
-Maths.OP = function(y)
+Maths.OP = function(y, fl)
     if type(y) ~= "number" then
         y = tonumber(y)
     end
-
+    if not fl then
+        fl = "math.floor"
+    end
     local function is_integer(n)
         return type(n) == "number" and n == math.floor(n)
     end
 
-    if is_integer(y) and y ~= 0 then
+    if is_integer(y) and y ~= 0 and y ~= 1 then
         if mappings[y] then
             return mappings[y]
         end
@@ -242,12 +247,12 @@ Maths.OP = function(y)
             denominator = 1
         end
         
-        local expression = string.format("math.floor((%d * %d^4 - %d * %d^3 + %d * %d^2 - %d * %d + %d) / (%d * %d^3 - %d * %d^2 + %d * %d - %d))", a, y, b, y, c, y, d, y, e, a, y, b, y, c, y, d)
+        local expression = string.format("%s((%d * %d^4 - %d * %d^3 + %d * %d^2 - %d * %d + %d) / (%d * %d^3 - %d * %d^2 + %d * %d - %d))",fl, a, y, b, y, c, y, d, y, e, a, y, b, y, c, y, d)
         
         mappings[y] = expression
         return expression
     else
-        if y == 0 then
+        if y == 0  then
             return string.format("0*%d", math.random(1, 65000))
         else
             return string.format("%s-%s+%s", y, y, y)
@@ -255,17 +260,10 @@ Maths.OP = function(y)
     end
 end
 
+
 local Variables = {}
 local GeneratedNames = {
-    "_SEX11I1l1IIIl111ll",
-    "_SEXI11I1llII1llI1l",
-    "_SEXlIlI11II1IIlIIl",
-    "_SEX1ll1lI111llllI1",
-    "_SEX1IIIIllIlll1lII",
-    "_SEXII11Ill11lI1lll",
-    "_SEXIIlll1III11IlII",
-    "_SEXlII1II111I11ll1",
-    "_SEXIl1111l1IIll111"
+
 }
 Variables.GenName = function()
     if Obfuscator.Settings.StringEncode == "confusion" then
@@ -294,9 +292,8 @@ Variables.GenName = function()
     end
 end
 
-Variables.Encrypt = function(var, type)
+Variables.Encrypt = function(var, type, key)
     if type == "bytes" then
-        print(tostring(var))
         local encoded = "\""
         for i = 1, #var do
             local charCode = string.byte(var, i)
@@ -320,9 +317,24 @@ Variables.Encrypt = function(var, type)
         end
         return zalgo_text
     else
-        return var
+        local textBytes = {string.byte(var, 1, #var)}
+        local keyBytes = {string.byte(key, 1, #key)}
+        local cipherBytes = {}
+
+        for i=1, #textBytes do
+            local keyByte = keyBytes[(i - 1) % #keyBytes + 1]
+            table.insert(cipherBytes, bit32.bxor(textBytes[i], keyByte))
+        end
+        local encoded = "\""
+        for i = 1, #var do
+            local charCode = string.byte(string.char(unpack(cipherBytes)), i)
+            encoded = encoded .. "\\" .. charCode
+        end
+        encoded = encoded .. "\""
+        return encoded
     end
 end
+
 
 Variables.Decrypt = function(encodedString, type)
     if type == "bytes" then
@@ -345,11 +357,19 @@ Variables.Decrypt = function(encodedString, type)
 end
 
 local Breaker = {}
+
 Breaker.BreakTable = function(input)
+    local var, method = input:match("([^:]+):([^:]+)")
+    
+    if var and method then
+        return var, method
+    end
+    
     local parts = {}
     for part in input:gmatch("[^%.]+") do
         table.insert(parts, part)
     end
+    
     local t, m = parts[1], parts[2]
     if t and m then
         return t, m
@@ -362,23 +382,86 @@ local function getlen(tbl)
     for _ in pairs(tbl) do count = count + 1 end
     return count
 end
+
+Obfuscator.RenameVars = function(source, ENV)
+    local Lexed = Lexer:Parse(source)
+    local SRCContent = {}
+    local x = ENV.MathFloor
+    local XX = 1
+    local funcname = ""
+    local Locals = {}
+    for k, v in pairs(Lexed) do
+        if v["type"] == "int" then
+            if Obfuscator.Settings.ComplexifyMaths then
+                v["raw"] = Maths.OP(v["raw"], x)
+            end
+        elseif v["type"] == "word" then
+            if not SRCContent[v["raw"]] then
+                if not _G[v["raw"]] then
+                    SRCContent[v["raw"]] = Variables.GenName()
+                    
+                    if v["raw"] == "xor" or v["raw"] == "test" then
+                        funcname = SRCContent[v["raw"]]
+                    end
+                    v["raw"] = SRCContent[v["raw"]]
+                end
+            else 
+                if SRCContent[v["raw"]] then
+                    v["raw"] = SRCContent[v["raw"]]
+                end
+            end
+        elseif v["type"] == "hashtag" then
+            v["raw"] = string.gsub(v["raw"], "#", "")
+            if SRCContent[v["raw"]] then
+                v["raw"] = "#"..SRCContent[v["raw"]]
+            end
+        elseif v["type"] == "global" then
+            --- table.insert/string.byte/bit32.bxor
+            local table, func = Breaker.BreakTable(v["raw"])
+            if ENV then
+                if ENV.Tables[table] and not ENV.Functions[v["raw"]] then
+                    v["raw"] = ENV.Tables[table].."."..func
+                elseif ENV.Locals[v["raw"]] and not ENV.Functions[v["raw"]] then
+                    v["raw"] = ENV.Locals[v["raw"]]
+                else
+                    v["raw"] = ENV.Functions[v["raw"]]
+                end
+            end
+        elseif v["type"] == "methodcall" then
+            local table, func = Breaker.BreakTable(v["raw"])
+            if ENV then
+                if ENV.Tables[table] and not ENV.Functions[v["raw"]] then
+                    v["raw"] = ENV.Tables[table]..":"..func
+                elseif ENV.Locals[v["raw"]] and not ENV.Functions[v["raw"]] then
+                    v["raw"] = ENV.Locals[v["raw"]]
+                elseif ENV.Functions[v["raw"]] then
+                    v["raw"] = ENV.Functions[v["raw"]]
+                elseif ENV.Locals[table] then
+                    v["raw"] = ENV.Locals[table]..":"..func
+                elseif SRCContent[table] then
+                    v["raw"] = SRCContent[table]..":"..func
+                end
+            end
+        end
+    end
+    return Serializer:Serialize(Lexed), funcname
+end
 Obfuscator.Obfuscate = function(source)
     local start = os.clock()
     print("--------------------------------------------------")
     print(string.format("Welcome to SexFuscate | %s", _VERSION))
     print("Initializing variables...")
-    
     local SRCContent = {}
     local ENV = {
         Functions = {},
         Locals = {},
-        Tables = {}
+        Tables = {},
+        MathFloor = ""
     }
     local MathsCount = 0
     local StringsCount = 0
     local WordsCount = 0
     local GlobalsCount = 0
-    
     for k, v in pairs(_G) do
         if type(v) == "table" then
             for x, func in pairs(v) do
@@ -386,12 +469,22 @@ Obfuscator.Obfuscate = function(source)
                     if k == "_G" then
                         ENV.Functions[debug.info(func, "n")] = Variables.GenName()
                     else
-                        ENV.Functions[k.."."..debug.info(func, "n")] = Variables.GenName()
+                        if debug.info(func, "n"):find("floor") then
+                            ENV.MathFloor = Variables.GenName()
+                            ENV.Functions[k.."."..debug.info(func, "n")] = ENV.MathFloor
+                        else
+                            ENV.Functions[k.."."..debug.info(func, "n")] = Variables.GenName()
+                        end
                     end
                 end
             end
         elseif type(v) == "function" then
-            ENV.Functions[debug.info(v, "n")] = Variables.GenName()
+            if v == math.floor then
+                ENV.MathFloor = Variables.GenName()
+                ENV.Functions[debug.info(v, "n")] = ENV.MathFloor
+            else
+                ENV.Functions[debug.info(v, "n")] = Variables.GenName()
+            end
         end
     end
     
@@ -400,7 +493,63 @@ Obfuscator.Obfuscate = function(source)
             ENV.Tables[k] = Variables.GenName()
         end
     end
-    
+    local before, after = Obfuscator.RenameVars([[
+        function xor(var, key)
+            local decoded = ""
+            local pattern = "\\(%d+)"
+            local index = 1
+            while index <= #var do
+                local start, finish, byteStr = var:find(pattern, index)
+                if not start then
+                    break
+                end
+                local byteCode = tonumber(byteStr)
+                decoded = decoded .. string.char(byteCode)
+                index = finish + 1
+            end
+            
+            local textBytes = {string.byte(decoded, 1, #decoded)}
+            local keyBytes = {string.byte(key, 1, #key)}
+            local cipherBytes = {}
+
+            for i=1, #textBytes do
+                local keyByte = keyBytes[(i - 1) % #keyBytes + 1]
+                table.insert(cipherBytes, bit32.bxor(textBytes[i], keyByte))
+            end
+            local xor = string.char(unpack(cipherBytes))
+            return xor
+        end
+    ]], ENV)
+    local zalgob, zalgoname = Obfuscator.RenameVars([[
+            local _SEX1IIIIllIlll1lII = {"\204\128","\204\130","\204\131","\204\132","\204\134","\204\136","\204\137","\204\138","\204\139","\204\140","\204\141","\204\142","\204\143","\204\145","\204\147","\204\148","\204\149","\204\150","\204\151","\204\152","\204\153","\204\154","\204\155","\204\156","\204\157","\204\158","\204\159","\204\160","\204\162","\204\163","\204\164","\204\165","\204\167","\204\168","\204\169","\204\170","\204\171","\204\172","\204\173","\204\174","\204\175","\204\176","\204\178","\204\179","\204\180","\204\181","\204\182","\204\183","\204\184","\204\185","\204\186","\204\187","\204\188","\204\189","\204\190","\204\191","\205\128","\205\130","\205\131","\205\132","\205\133","\205\135","\205\136","\205\137","\205\138","\205\139","\205\140","\205\141","\205\142","\205\143","\205\144","\205\145","\205\146","\205\147","\205\148","\205\149","\205\150","\205\151","\205\152","\205\153","\205\154","\205\155","\205\156","\205\157","\205\158","\205\159","\205\160","\205\161","\205\162","\205\163","\205\164","\205\165","\205\166","\205\167","\205\168","\205\169","\205\170","\205\171","\205\172","\205\173","\205\174","\205\175","\205\176","\205\177","\205\178","\205\179","\205\180","\205\181","\205\182","\205\183","\205\184","\205\185","\205\186","\205\187","\205\188","\205\189","\205\190","\205\191"}
+            local function _SEX11I1l1IIIl111ll(_SEXI11I1llII1llI1l)
+                local _SEXlIlI11II1IIlIIl = ""
+                for i = 1, #_SEXI11I1llII1llI1l do
+                    local _SEX1ll1lI111llllI1 = _SEXI11I1llII1llI1l:sub(i, i)
+                    _SEXlIlI11II1IIlIIl = _SEXlIlI11II1IIlIIl .. _SEX1ll1lI111llllI1
+                    for j = 1, math.random(1, 8) do
+                        _SEXlIlI11II1IIlIIl = _SEXlIlI11II1IIlIIl .. _SEX1IIIIllIlll1lII[math.random(1, #_SEX1IIIIllIlll1lII)]
+                    end
+                    for j = 1, math.random(1, 8) do
+                        _SEXlIlI11II1IIlIIl = _SEXlIlI11II1IIlIIl .. _SEX1IIIIllIlll1lII[math.random(1, #_SEX1IIIIllIlll1lII)]
+                    end
+                end
+                return _SEXlIlI11II1IIlIIl
+            end
+            local function test(_SEXlII1II111I11ll1)
+                local _SEXIl1111l1IIll111 = ""
+                for i = 1, #_SEXlII1II111I11ll1 do
+                    local _SEXIlIIl11IllI1IlI = _SEXlII1II111I11ll1:sub(i, i)
+                    if utf8.len(_SEXIlIIl11IllI1IlI) == 1 then
+                        _SEXIl1111l1IIll111 = _SEXIl1111l1IIll111 .. _SEXIlIIl11IllI1IlI
+                    end
+                end
+                return _SEXIl1111l1IIll111
+            end;
+            
+        ]], ENV)
+    local XOR = Minifier:Minify(before)
+    local ZALGO = Minifier:Minify(zalgob)
     local SRCStack = "{{{}, {}, {}}}"
     print("Fetching your code...")
     
@@ -429,7 +578,10 @@ Obfuscator.Obfuscate = function(source)
                 local raw = v["raw"]:gsub("[\"']", "")
                 if Obfuscator.Settings.EncodingAlgorithm == "zalgo" then
                     local zalgoed = Variables.Encrypt(raw, Obfuscator.Settings.EncodingAlgorithm)
-                    v["raw"] = string.format("_SEXIIlll1III11IlII([[%s]])", zalgoed)
+                    v["raw"] = string.format("%s([[%s]])", zalgoname, zalgoed)
+                elseif Obfuscator.Settings.EncodingAlgorithm == "xor" then
+                    local crypted = Variables.Encrypt(raw, Obfuscator.Settings.EncodingAlgorithm, "testkey")
+                    v["raw"] = string.format("%s([[%s]], 'testkey')", after, crypted)
                 else
                     v["raw"] = Variables.Encrypt(raw, Obfuscator.Settings.EncodingAlgorithm)
                 end
@@ -437,7 +589,7 @@ Obfuscator.Obfuscate = function(source)
         elseif v["type"] == "int" then
             if Obfuscator.Settings.ComplexifyMaths then
                 MathsCount = MathsCount + 1
-                v["raw"] = Maths.OP(v["raw"])
+                v["raw"] = Maths.OP(v["raw"], ENV.MathFloor)
             end
         elseif v["type"] == "word" then
             WordsCount = WordsCount + 1
@@ -457,7 +609,6 @@ Obfuscator.Obfuscate = function(source)
                         if ENV.Functions[v["raw"]] then
                             v["raw"] = ENV.Functions[v["raw"]]
                         else
-                            
                         end
                     end
                 end
@@ -473,7 +624,6 @@ Obfuscator.Obfuscate = function(source)
                     if ENV.Functions[v["raw"]] then
                         v["raw"] = ENV.Functions[v["raw"]]
                     else
-                        print("BOOOO")
                     end
                 end
             end
@@ -489,6 +639,7 @@ Obfuscator.Obfuscate = function(source)
                     end
                 else
                     if ENV.Tables[t] then
+                        
                         if ENV.Functions[t.."."..m] then
                             v["raw"] = ENV.Functions[t.."."..m]
                         else
@@ -512,8 +663,20 @@ Obfuscator.Obfuscate = function(source)
                     v["raw"] = Table.."."..Method
                 end
             end
+        elseif v["type"] == "methodcall" then
+            local S, Table, Method = Breaker.BreakTable(v["raw"])
+            if Obfuscator.Settings.ShortOutputs and S then
+                if _G[Table] then
+                    ENV.Locals[Table] = Variables.GenName()
+                    Table = ENV.Locals[Table]
+                    v["raw"] = Table.."."..Method
+                end
+            elseif S then
+                if ENV.Tables[Table] then
+                    v["raw"] = Table.."."..Method
+                end
+            end
         elseif v["type"] == "hashtag" then
-            print(type(v["raw"]))
             v["raw"] = string.gsub(v["raw"], "#", "")
             if ENV.Tables[v["raw"]] then
                 v["raw"] = "#"..ENV.Tables[v["raw"]]
@@ -579,39 +742,14 @@ Obfuscator.Obfuscate = function(source)
         end
     end
     print("Obfuscating the code...")
-    
-    if Obfuscator.Settings.EncodingAlgorithm == "zalgo" and Obfuscator.Settings.EncodeStrings then
-        local zalgo = Minifier:Minify([[
-            local _SEX1IIIIllIlll1lII = {"\204\128","\204\130","\204\131","\204\132","\204\134","\204\136","\204\137","\204\138","\204\139","\204\140","\204\141","\204\142","\204\143","\204\145","\204\147","\204\148","\204\149","\204\150","\204\151","\204\152","\204\153","\204\154","\204\155","\204\156","\204\157","\204\158","\204\159","\204\160","\204\162","\204\163","\204\164","\204\165","\204\167","\204\168","\204\169","\204\170","\204\171","\204\172","\204\173","\204\174","\204\175","\204\176","\204\178","\204\179","\204\180","\204\181","\204\182","\204\183","\204\184","\204\185","\204\186","\204\187","\204\188","\204\189","\204\190","\204\191","\205\128","\205\130","\205\131","\205\132","\205\133","\205\135","\205\136","\205\137","\205\138","\205\139","\205\140","\205\141","\205\142","\205\143","\205\144","\205\145","\205\146","\205\147","\205\148","\205\149","\205\150","\205\151","\205\152","\205\153","\205\154","\205\155","\205\156","\205\157","\205\158","\205\159","\205\160","\205\161","\205\162","\205\163","\205\164","\205\165","\205\166","\205\167","\205\168","\205\169","\205\170","\205\171","\205\172","\205\173","\205\174","\205\175","\205\176","\205\177","\205\178","\205\179","\205\180","\205\181","\205\182","\205\183","\205\184","\205\185","\205\186","\205\187","\205\188","\205\189","\205\190","\205\191"}
-            local function _SEX11I1l1IIIl111ll(_SEXI11I1llII1llI1l)
-                local _SEXlIlI11II1IIlIIl = ""
-                for i = 1, #_SEXI11I1llII1llI1l do
-                    local _SEX1ll1lI111llllI1 = _SEXI11I1llII1llI1l:sub(i, i)
-                    _SEXlIlI11II1IIlIIl = _SEXlIlI11II1IIlIIl .. _SEX1ll1lI111llllI1
-                    for j = 1, math.random(1, 8) do
-                        _SEXlIlI11II1IIlIIl = _SEXlIlI11II1IIlIIl .. _SEX1IIIIllIlll1lII[math.random(1, #_SEX1IIIIllIlll1lII)]
-                    end
-                    for j = 1, math.random(1, 8) do
-                        _SEXlIlI11II1IIlIIl = _SEXlIlI11II1IIlIIl .. _SEX1IIIIllIlll1lII[math.random(1, #_SEX1IIIIllIlll1lII)]
-                    end
-                end
-                return _SEXlIlI11II1IIlIIl
-            end
-            local function _SEXIIlll1III11IlII(_SEXlII1II111I11ll1)
-                local _SEXIl1111l1IIll111 = ""
-                for i = 1, #_SEXlII1II111I11ll1 do
-                    local _SEXIlIIl11IllI1IlI = _SEXlII1II111I11ll1:sub(i, i)
-                    if utf8.len(_SEXIlIIl11IllI1IlI) == 1 then
-                        _SEXIl1111l1IIll111 = _SEXIl1111l1IIll111 .. _SEXIlIIl11IllI1IlI
-                    end
-                end
-                return _SEXIl1111l1IIll111
-            end;
-        ]])
-        
-        n = string.format("return (function(...) do local sex = '%s' end do "..ENVCode..zalgo..n..";end do end end)(%s)", Obfuscator.Settings.Watermark, SRCStack)
+    if Obfuscator.Settings.EncodingAlgorithm == "xor" and Obfuscator.Settings.EncodeStrings then
+        n = string.format("return(function(...) do local sex = '%s' end do %s %s %s;end do end end)(%s)", 
+            Obfuscator.Settings.Watermark, ENVCode, XOR, n, SRCStack)
+    elseif Obfuscator.Settings.EncodingAlgorithm == "zalgo" and Obfuscator.Settings.EncodeStrings then
+        n = string.format("return(function(...) do local sex = '%s' end do %s %s %s;end do end end)(%s)", 
+            Obfuscator.Settings.Watermark, ENVCode, ZALGO, n, SRCStack)
     else
-        n = string.format("return (function(...) do local sex = '%s' end do "..n.." end do end end)(%s)", Obfuscator.Settings.Watermark, SRCStack)
+        n = string.format("return(function(...) do local sex = '%s' end do "..n.." end do end end)(%s)", Obfuscator.Settings.Watermark, SRCStack)
     end
     
     print(string.format("Obfuscation completed in %d seconds. Check the output !", os.clock() - start))

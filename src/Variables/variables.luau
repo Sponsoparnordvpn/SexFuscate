@@ -1,33 +1,36 @@
 local Variables = {}
 local GeneratedNames = {
-    "_SEX11I1l1IIIl111ll",
-    "_SEXI11I1llII1llI1l",
-    "_SEXlIlI11II1IIlIIl",
-    "_SEX1ll1lI111llllI1",
-    "_SEX1IIIIllIlll1lII",
-    "_SEXII11Ill11lI1lll",
-    "_SEXIIlll1III11IlII",
-    "_SEXlII1II111I11ll1",
-    "_SEXIl1111l1IIll111"
-}
 
+}
 Variables.GenName = function()
-    local name = Obfuscator.Settings.Prefix
-    local choices = {"1", "I", "l"}
-    for i = 1, 15 do
-        local choice = math.random(1, #choices)
-        name = name .. choices[choice]
-    end
-    if GeneratedNames[name] then
-        return Variables.GenName()
+    if Obfuscator.Settings.StringEncode == "confusion" then
+        local name = Obfuscator.Settings.Prefix
+        local choices = {"1", "I", "l"}
+        for i = 1, 15 do
+            local choice = math.random(1, #choices)
+            name = name .. choices[choice]
+        end
+        if table.find(GeneratedNames, name) then
+            return Variables.GenName()
+        else
+            table.insert(GeneratedNames, name)
+            return name
+        end
     else
-        GeneratedNames[name] = name
+        local char = string.lower(string.char(math.random(string.byte('A'), string.byte('Z'))))
+        if table.find(GeneratedNames, char) then
+            char = char..tostring(#GeneratedNames)
+            table.insert(GeneratedNames, char)
+            return char
+        else
+            table.insert(GeneratedNames, char)
+            return char
+        end
     end
-    return name
 end
-Variables.Encrypt = function(var, type)
+
+Variables.Encrypt = function(var, type, key)
     if type == "bytes" then
-        print(tostring(var))
         local encoded = "\""
         for i = 1, #var do
             local charCode = string.byte(var, i)
@@ -51,9 +54,24 @@ Variables.Encrypt = function(var, type)
         end
         return zalgo_text
     else
-        return var
+        local textBytes = {string.byte(var, 1, #var)}
+        local keyBytes = {string.byte(key, 1, #key)}
+        local cipherBytes = {}
+
+        for i=1, #textBytes do
+            local keyByte = keyBytes[(i - 1) % #keyBytes + 1]
+            table.insert(cipherBytes, bit32.bxor(textBytes[i], keyByte))
+        end
+        local encoded = "\""
+        for i = 1, #var do
+            local charCode = string.byte(string.char(unpack(cipherBytes)), i)
+            encoded = encoded .. "\\" .. charCode
+        end
+        encoded = encoded .. "\""
+        return encoded
     end
 end
+
 
 Variables.Decrypt = function(encodedString, type)
     if type == "bytes" then
@@ -74,5 +92,6 @@ Variables.Decrypt = function(encodedString, type)
         return encodedString
     end
 end
+
 
 return Variables
