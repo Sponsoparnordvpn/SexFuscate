@@ -1,3 +1,4 @@
+# SexFuscate 1.0.2
 # SexFuscate 1.0.3
 
 Welcome to SexFuscate, a Luau uglifier made in Luau.
